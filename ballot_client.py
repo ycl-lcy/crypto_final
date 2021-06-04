@@ -1,47 +1,48 @@
 import socket
 import time
-from Crypto.PublicKey import RSA
-from Crypto.Util.number import *
-import time
 import math
 import random
 import sympy
 import hashlib
+from Crypto.PublicKey import RSA
+from Crypto.Util.number import *
 
 time.clock = time.process_time
 
-HOST = '0.0.0.0'
-PORT = 7777
+f = open('accounts.txt', 'r')
+a = f.read().split('\n')[3:]
+f.close()
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((HOST, PORT))
-
-s.send('1'.encode())
-print('username: ', end='')
-username = input()
-print('password: ', end='')
-password = input()
+print('Choose Account: ', end='')
+i = input()
+username = a[int(i)][2:8]
+pasword = a[int(i)][13:25]
 
 ckey = RSA.generate(1024)
 
-time.sleep(0.01)
-s.send(username.encode())
-time.sleep(0.01)
-s.send(password.encode())
-time.sleep(0.01)
-s.send(str(ckey.e).encode())
-time.sleep(0.01)
-s.send(str(ckey.n).encode())
-skey_e = int(s.recv(1024).decode())
-skey_n = int(s.recv(1024).decode())
+conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+conn.connect(('0.0.0.0', 7777))
 
-valid_projects = s.recv(1024).decode()
+conn.send('1'.encode())
+
+time.sleep(0.01)
+conn.send(username.encode())
+time.sleep(0.01)
+conn.send(pasword.encode())
+time.sleep(0.01)
+conn.send(str(ckey.e).encode())
+time.sleep(0.01)
+conn.send(str(ckey.n).encode())
+skey_e = int(conn.recv(1024).decode())
+skey_n = int(conn.recv(1024).decode())
+
+valid_projects = conn.recv(1024).decode()
 valid_projects = valid_projects.split('.')
 valid_projects = [int(i) for i in valid_projects]
-ss = 'Project List: '
+s = 'Project List: '
 for i in valid_projects:
-    ss += str(i)+','
-print(ss[:-1])
+    s += str(i)+','
+print(s[:-1])
 print('Choose Project: ', end='')
 project_id = int(input())
 
@@ -51,22 +52,22 @@ pkc = int(str(ckey.n)+str(ckey.e))
 pkc_b = (pkc*(r**skey_e)) % skey_n
 
 time.sleep(0.01)
-s.send(ticket.encode())
+conn.send(ticket.encode())
 time.sleep(0.01)
-s.send(str(pkc_b).encode())
+conn.send(str(pkc_b).encode())
 
-sig_ticket = int(s.recv(1024).decode())
-options = s.recv(1024).decode()
-sig_pkc_b = int(s.recv(1024).decode())
+sig_ticket = int(conn.recv(1024).decode())
+options = conn.recv(1024).decode()
+sig_pkc_b = int(conn.recv(1024).decode())
 r_1 = sympy.mod_inverse(r, skey_n)
 sig_pkc = (sig_pkc_b * r_1) % skey_n
 
 options = options.split('.')
 options = [int(i) for i in options]
-ss = 'Option List: '
+s = 'Option List: '
 for i in options:
-    ss += str(i)+','
-print(ss[:-1])
+    s += str(i)+','
+print(s[:-1])
 print('Choose Option: ', end='')
 option = int(input())
 
@@ -80,3 +81,4 @@ f.write(str(pkc)+'\n')
 f.write(str(sig_ticket)+'\n')
 f.write(str(sig_pkc)+'\n')
 f.write(str(sig_hoption)+'\n')
+f.close()

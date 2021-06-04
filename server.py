@@ -3,11 +3,11 @@ import random
 import string
 import sys
 import socket
-from Crypto.PublicKey import RSA
-from Crypto.Util.number import *
 import time
 import multiprocessing
 import hashlib
+from Crypto.PublicKey import RSA
+from Crypto.Util.number import *
 
 time.clock = time.process_time
 
@@ -19,7 +19,7 @@ projects[5] = [1,2,3,5,6]
 
 skey = RSA.generate(1024)
 
-def func(conn):
+def server(conn):
     try:
         flag = conn.recv(1).decode() 
         connection = pymysql.connect(host='localhost',
@@ -39,11 +39,7 @@ def func(conn):
                     cursor.execute(sql, (username,))
                     result = cursor.fetchone()
                     if result['password'] != hashlib.sha256(password.encode()).hexdigest():
-                        print('bye')
                         exit()
-                    else:
-                        print('OK')
-
                
                 ckey_e = int(conn.recv(1024).decode())
                 ckey_n = int(conn.recv(1024).decode())
@@ -54,7 +50,7 @@ def func(conn):
                 conn.send(str(skey.n).encode())
 
                 valid_projects = ''
-                for i in range(1, len(projects)):
+                for i in range(len(projects)):
                     if len(projects[i]) != 0:
                         with connection.cursor() as cursor:
                             sql = "SELECT * FROM `signatures` WHERE `username`=%s and `projectID`=%s"
@@ -73,8 +69,8 @@ def func(conn):
                 project_id = int(ticket[:ticket.find('00000')])
                 ticket = int(ticket)
                 if project_id not in valid_projects:
-                    print('byeee')
                     exit()
+
                 sig_ticket = pow(ticket, skey.d, skey.n)
                 time.sleep(0.01)
                 conn.send(str(sig_ticket).encode())
@@ -109,7 +105,6 @@ def func(conn):
             project_id = int(ticket[:ticket.find('00000')])
             
             if option not in projects[project_id]:
-                print('bye')
                 exit()
 
             if sig_pkc1 != sig_pkc2:
@@ -119,9 +114,7 @@ def func(conn):
             hoption2 = int(hashlib.sha256(str(option).encode()).hexdigest(), 16)
             if hoption1 != hoption2:
                 exit()
-            else:
-                exit()
-            
+
             with connection:
                 with connection.cursor() as cursor:
                     sql = "SELECT * FROM `votes` WHERE `PKC`=%s"
@@ -138,57 +131,37 @@ def func(conn):
 
         elif flag == '3':
             project_list = ''
-            for i,e in enumerate(projects):
-                if len(e) != 0:
+            for i in range(len(projects)):
+                if len(projects[i]) != 0:
                     project_list += '.'+str(i)
             project_list = project_list[1:]
             conn.send(project_list.encode())
             project_id = int(conn.recv(1024).decode())
             if not str(project_id) in project_list.split('.'):
-                print('bye')
+                exit()
 
             with connection:
                 with connection.cursor() as cursor:
                     sql = "SELECT * FROM `votes` WHERE `projectID`=%s"
                     cursor.execute(sql, project_id)
-                    result = cursor.fetchone()
+                    result = cursor.fetchall()
+                    print(result)
                     conn.send(str(result).encode())
             
         else:
-            print('bbbyyyeeee')
+            print('bye')
+
     except ConnectionResetError:
         conn.close()
 
-HOST = '0.0.0.0'
-PORT = 7777
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-s.bind((HOST, PORT))
-s.listen(5)
+s.bind(('0.0.0.0', 7777))
+s.listen(10)
 
 while True:
     conn, addr = s.accept()
-    m = multiprocessing.Process(target=func, args=(conn,))
+    m = multiprocessing.Process(target=server, args=(conn,))
     m.daemon = True
     m.start()
-
-# def username_generator(size=6, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits):
-    # return ''.join(random.choice(chars) for _ in range(size))
-# def password_generator(size=12, chars=string.ascii_uppercase + string.ascii_lowercase + string.digits + string.punctuation):
-    # n = ''.join(random.choice(chars) for _ in range(size))
-    # return n, hashlib.sha256(n.encode()).hexdigest()
-
-# connection = pymysql.connect(host='localhost',
-                             # user='gg3be0',
-                             # password='57-general-LESS-liar-48',
-                             # database='crypto_final',
-                             # cursorclass=pymysql.cursors.DictCursor)
-# with connection:
-    # with connection.cursor() as cursor:
-        # for i in range(100):
-            # sql = "INSERT INTO `users` (`username`, `password`, password2) VALUES (%s, %s, %s)"
-            # (a, b) = password_generator()
-            # cursor.execute(sql, (username_generator(), b, a))
-        # connection.commit()
-
 

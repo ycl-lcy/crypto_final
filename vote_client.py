@@ -1,21 +1,17 @@
 import socket
 import time
-from Crypto.PublicKey import RSA
-from Crypto.Util.number import *
-import time
 import math
 import random
 import sympy
+from Crypto.PublicKey import RSA
+from Crypto.Util.number import *
 
 time.clock = time.process_time
 
-HOST = '0.0.0.0'
-PORT = 7777
+conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+conn.connect(('0.0.0.0', 7777))
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((HOST, PORT))
-
-s.send('2'.encode())
+conn.send('2'.encode())
 
 print('Ballot Name: ', end='')
 ballot = input()
@@ -25,15 +21,16 @@ pkc = f.readline()[:-1]
 sig_ticket = f.readline()[:-1]
 sig_pkc = f.readline()[:-1]
 sig_hoption = f.readline()[:-1]
+f.close()
 
 time.sleep(0.5)
-s.send(option.encode())
+conn.send(option.encode())
 time.sleep(0.5)
-s.send(pkc.encode())
+conn.send(pkc.encode())
 time.sleep(0.5)
-s.send(sig_ticket.encode())
+conn.send(sig_ticket.encode())
 time.sleep(0.5)
-s.send(sig_pkc.encode())
+conn.send(sig_pkc.encode())
 time.sleep(0.5)
-s.send(sig_hoption.encode())
-print(s.recv(1024).decode())
+conn.send(sig_hoption.encode())
+print(conn.recv(1024).decode())
