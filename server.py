@@ -41,9 +41,6 @@ def server(conn):
                     if result['password'] != hashlib.sha256(password.encode()).hexdigest():
                         exit()
                
-                ckey_e = int(conn.recv(1024).decode())
-                ckey_n = int(conn.recv(1024).decode())
-                
                 time.sleep(0.01)
                 conn.send(str(skey.e).encode())
                 time.sleep(0.01)
@@ -145,7 +142,6 @@ def server(conn):
                     sql = "SELECT * FROM `votes` WHERE `projectID`=%s"
                     cursor.execute(sql, project_id)
                     result = cursor.fetchall()
-                    print(result)
                     conn.send(str(result).encode())
             
         else:
